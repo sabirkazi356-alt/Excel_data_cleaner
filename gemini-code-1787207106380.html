@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro AI Excel Data Cleaning & Analytics Suite</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+    /* DYNAMIC COLOR THEMES */
+    :root[data-theme="light"] {
+        --bg: #f8fafc;
+        --card-bg: #ffffff;
+        --primary: #1e293b;
+        --text: #0f172a;
+        --text-muted: #64748b;
+        --border: #e2e8f0;
+        --accent: #2563eb;
+        --accent-hover: #1d4ed8;
+        --accent-light: #eff6ff;
+        --success: #10b981;
+        --danger: #ef4444;
+        --shadow: 0 4px 12px rgba(0,0,0,0.05);
+        --header-gradient: linear-gradient(135deg, #1e3a8a, #2563eb);
+    }
+
+    :root[data-theme="dark"] {
+        --bg: #0f172a;
+        --card-bg: #1e293b;
+        --primary: #f8fafc;
+        --text: #f1f5f9;
+        --text-muted: #94a3b8;
+        --border: #334155;
+        --accent: #3b82f6;
+        --accent-hover: #60a5fa;
+        --accent-light: #1e293b;
+        --success: #34d399;
+        --danger: #f87171;
+        --shadow: 0 4px 12px rgba(0,0,0,0.3);
+        --header-gradient: linear-gradient(135deg, #0f172a, #1e293b);
+    }
+
+    :root[data-theme="emerald"] {
+        --bg: #f0fdf4;
+        --card-bg: #ffffff;
+        --primary: #064e3b;
+        --text: #022c22;
+        --text-muted: #047857;
+        --border: #a7f3d0;
+        --accent: #059669;
+        --accent-hover: #047857;
+        --accent-light: #ecfdf5;
+        --success: #10b981;
+        --danger: #ef4444;
+        --shadow: 0 4px 12px rgba(5,150,105,0.1);
+        --header-gradient: linear-gradient(135deg, #064e3b, #059669);
+    }
+
+    :root[data-theme="cyberpunk"] {
+        --bg: #120224;
+        --card-bg: #1d0836;
+        --primary: #ff007f;
+        --text: #00ffff;
+        --text-muted: #d946ef;
+        --border: #ff007f;
+        --accent: #ff007f;
+        --accent-hover: #d9006c;
+        --accent-light: #2a0b4d;
+        --success: #00ff66;
+        --danger: #ff0055;
+        --shadow: 0 0 15px rgba(255,0,127,0.3);
+        --header-gradient: linear-gradient(135deg, #7928ca, #ff007f);
+    }
+
+    :root[data-theme="sunset"] {
+        --bg: #fff7ed;
+        --card-bg: #ffffff;
+        --primary: #7c2d12;
+        --text: #431407;
+        --text-muted: #c2410c;
+        --border: #ffedd5;
+        --accent: #ea580c;
+        --accent-hover: #c2410c;
+        --accent-light: #fff7ed;
+        --success: #10b981;
+        --danger: #ef4444;
+        --shadow: 0 4px 12px rgba(234,88,12,0.1);
+        --header-gradient: linear-gradient(135deg, #9a3412, #ea580c);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; transition: background-color 0.25s, color 0.25s, border-color 0.25s; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 3rem; line-height: 1.4; font-size: 0.88rem; }
+    
+    .container { max-width: 1350px; margin: 0 auto; padding: 1rem; }
+
+    /* Header Bar */
+    .top-header {
+        background: var(--header-gradient);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .top-header h1 { font-size: 1.35rem; font-weight: 800; display: flex; align-items: center; gap: 0.6rem; }
+    .top-header p { opacity: 0.9; font-size: 0.8rem; margin-top: 0.15rem; }
+
+    /* Theme Switcher */
+    .theme-selector {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(255,255,255,0.18);
+        padding: 0.3rem 0.6rem;
+        border-radius: 20px;
+        backdrop-filter: blur(8px);
+    }
+
+    .theme-btn {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid white;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .theme-btn:hover { transform: scale(1.25); }
+    .theme-light { background: #f8fafc; }
+    .theme-dark { background: #0f172a; }
+    .theme-emerald { background: #059669; }
+    .theme-cyberpunk { background: #ff007f; }
+    .theme-sunset { background: #ea580c; }
+
+    /* Upload Box */
+    .upload-card {
+        background: var(--card-bg);
+        border: 2px dashed var(--accent);
+        border-radius: 12px;
+        padding: 2.5rem 1.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.25s;
+        box-shadow: var(--shadow);
+    }
+
+    .upload-card:hover {
+        transform: translateY(-2px);
+        background: var(--accent-light);
+    }
+
+    .upload-icon { font-size: 2.5rem; color: var(--accent); margin-bottom: 0.75rem; }
+
+    /* Button Styling */
+    .btn {
+        background: var(--accent);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.82rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: all 0.2s;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-success { background: var(--success); }
+    .btn-secondary { background: #64748b; }
+    .btn-secondary:hover { background: #475569; }
+
+    /* Dashboard Layout */
+    .dashboard { display: none; flex-direction: column; gap: 1rem; }
+    .grid-compact { display: grid; grid-template-columns: 290px 1fr; gap: 1rem; }
+    @media (max-width: 900px) { .grid-compact { grid-template-columns: 1fr; } }
+
+    .card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1rem;
+        box-shadow: var(--shadow);
+    }
+
+    .card-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        margin-bottom: 0.85rem;
+        color: var(--primary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.4rem;
+    }
+
+    /* Option Toggles */
+    .toggle-group { display: flex; flex-direction: column; gap: 0.5rem; }
+    .toggle-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.65rem;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .toggle-item:hover { border-color: var(--accent); }
+    .toggle-item input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent);
+        cursor: pointer;
+    }
+
+    /* Metrics Bar */
+    .metrics-grid-ultra-compact {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.4rem 0.8rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .metric-inline-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .metric-inline-title { color: var(--text-muted); }
+    .metric-inline-value { font-weight: 800; font-size: 0.9rem; color: var(--accent); }
+
+    /* Tab Switcher */
+    .tab-bar {
+        display: flex;
+        gap: 0.4rem;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .tab-btn {
+        padding: 0.35rem 0.75rem;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        font-weight: 600;
+        font-size: 0.8rem;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .tab-btn.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+        background: var(--accent-light);
+        border-radius: 6px 6px 0 0;
+    }
+
+    /* Table Container */
+    .table-container {
+        overflow-x: auto;
+        max-height: 380px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.78rem; text-align: left; }
+    th, td { padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th { background: var(--bg); color: var(--primary); font-weight: 700; position: sticky; top: 0; z-index: 10; }
+    tr:hover { background: var(--accent-light); }
+
+    .tag-success { background: rgba(16, 185, 129, 0.15); color: var(--success); padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 700; font-size: 0.68rem; }
+    .tag-info { background: rgba(37, 99, 235, 0.15); color: var(--accent); padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 700; font-size: 0.68rem; }
+    .tag-warning { background: rgba(245, 158, 11, 0.15); color: #d97706; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 700; font-size: 0.68rem; }
+    .tag-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 700; font-size: 0.68rem; }
+
+    /* STRICT PRINT STYLES */
+    @media print {
+        @page {
+            margin: 0;
+            size: auto;
+        }
+
+        body {
+            background: white !important;
+            color: black !important;
+            padding: 10px !important;
+            margin: 0 !important;
+        }
+
+        .top-header, 
+        .upload-card, 
+        .grid-compact > div:first-child, 
+        .theme-selector, 
+        .tab-bar, 
+        .action-buttons, 
+        .metrics-grid-ultra-compact,
+        #summaryCard,
+        #fileNameDisplay,
+        #dashboard > div:first-child,
+        footer {
+            display: none !important;
+        }
+
+        .container, .dashboard, .grid-compact, .card {
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+            display: block !important;
+        }
+
+        .table-container {
+            max-height: none !important;
+            overflow: visible !important;
+            border: none !important;
+        }
+
+        table { width: 100% !important; border-collapse: collapse !important; }
+        th, td {
+            padding: 5px 8px !important;
+            font-size: 8.5pt !important;
+            border: 1px solid #000 !important;
+            color: #000 !important;
+        }
+
+        th { background-color: #f2f2f2 !important; font-weight: bold !important; -webkit-print-color-adjust: exact; }
+    }
+
+    /* Neutral Footer */
+    footer.neutral-footer {
+        margin-top: 2rem;
+        text-align: center;
+        padding: 0.8rem;
+        border-top: 1px solid #cbd5e1;
+        background-color: #f1f5f9;
+        color: #334155 !important;
+        font-weight: 600;
+        font-size: 0.82rem;
+        border-radius: 6px;
+    }
+    footer.neutral-footer span { color: #0f172a !important; font-weight: 800; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Top Header -->
+    <div class="top-header">
+        <div>
+            <h1><i class="fa-solid fa-wand-magic-sparkles"></i> AI Excel Data Cleaner & Studio</h1>
+            <p>Smart multi-delimiter splitting, side-by-side inspection, date normalization & instant printing</p>
+        </div>
+        
+        <!-- Theme Switcher -->
+        <div class="theme-selector">
+            <span style="font-size: 0.7rem; font-weight: 700; margin-right: 0.2rem; color: white;">THEMES:</span>
+            <div class="theme-btn theme-light" onclick="setTheme('light')" title="Light"></div>
+            <div class="theme-btn theme-dark" onclick="setTheme('dark')" title="Dark"></div>
+            <div class="theme-btn theme-emerald" onclick="setTheme('emerald')" title="Emerald"></div>
+            <div class="theme-btn theme-cyberpunk" onclick="setTheme('cyberpunk')" title="Cyberpunk"></div>
+            <div class="theme-btn theme-sunset" onclick="setTheme('sunset')" title="Sunset"></div>
+        </div>
+    </div>
+
+    <!-- Upload Box -->
+    <div class="upload-card" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <i class="fa-solid fa-file-excel upload-icon"></i>
+        <h3 style="font-size: 1.1rem;">Click or Drag & Drop Excel / CSV File Here</h3>
+        <p style="color:var(--text-muted); font-size: 0.8rem; margin-top:0.3rem;">Supports .xlsx, .xls, and .csv with automatic multi-delimiter detection</p>
+        <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" onchange="handleFileSelect(event)">
+    </div>
+
+    <!-- Main Dashboard -->
+    <div class="dashboard" id="dashboard">
+        <!-- Action Header Bar -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; background:var(--card-bg); padding:0.6rem 1rem; border-radius:10px; border:1px solid var(--border);">
+            <div style="font-weight:700; font-size:0.95rem;" id="fileNameDisplay"><i class="fa-solid fa-file-csv"></i> File Loaded</div>
+            
+            <div class="action-buttons" style="display:flex; gap:0.5rem;">
+                <button class="btn btn-secondary" onclick="triggerCleanPrint()">
+                    <i class="fa-solid fa-print"></i> Print Clean Data
+                </button>
+                <button class="btn btn-success" onclick="exportExcel()">
+                    <i class="fa-solid fa-file-excel"></i> Export Cleaned Excel
+                </button>
+            </div>
+        </div>
+
+        <div class="grid-compact">
+            <!-- CLEANING OPTIONS -->
+            <div class="card">
+                <div class="card-title">
+                    <span><i class="fa-solid fa-sliders"></i> Cleaning Options</span>
+                    <span class="tag-info">Compact Mode</span>
+                </div>
+
+                <div class="toggle-group">
+                    <label class="toggle-item">
+                        <div>
+                            <strong>Auto Split Delimiters</strong>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">Splits |, >, ~, ;, tab merged text</div>
+                        </div>
+                        <input type="checkbox" id="optAutoSplit" checked>
+                    </label>
+
+                    <label class="toggle-item">
+                        <div>
+                            <strong>Clean Noise & Symbols</strong>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">Strips leading ##, @, trailing spaces</div>
+                        </div>
+                        <input type="checkbox" id="optCleanNoise" checked>
+                    </label>
+
+                    <label class="toggle-item">
+                        <div>
+                            <strong>Split Full Name</strong>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">Extracts First & Last Name</div>
+                        </div>
+                        <input type="checkbox" id="optSplitName" checked>
+                    </label>
+
+                    <label class="toggle-item">
+                        <div>
+                            <strong>Clean Suffixes & Units</strong>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">Strips 'hrs', 'kg', '$' from numbers</div>
+                        </div>
+                        <input type="checkbox" id="optCleanUnits" checked>
+                    </label>
+
+                    <label class="toggle-item">
+                        <div>
+                            <strong>Fix Dates (YYYY-MM-DD)</strong>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">Standardizes irregular date strings</div>
+                        </div>
+                        <input type="checkbox" id="optFixDates" checked>
+                    </label>
+
+                    <label class="toggle-item">
+                        <div>
+                            <strong>Deduplicate Records</strong>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">Removes exact duplicated rows</div>
+                        </div>
+                        <input type="checkbox" id="optDedupe" checked>
+                    </label>
+                </div>
+
+                <button class="btn" style="width:100%; margin-top:1rem; justify-content:center;" onclick="applyCleaningPipeline()">
+                    <i class="fa-solid fa-arrows-rotate"></i> Re-Apply Cleaning
+                </button>
+            </div>
+
+            <!-- RIGHT PANEL: METRICS, SUMMARY, DATA TABLE -->
+            <div>
+                <!-- ULTRA COMPACT METRICS BAR -->
+                <div class="metrics-grid-ultra-compact">
+                    <div class="metric-inline-item">
+                        <span class="metric-inline-title">Original Rows:</span>
+                        <span class="metric-inline-value" id="valOrigRows">0</span>
+                    </div>
+                    <div style="color:var(--border);">|</div>
+                    <div class="metric-inline-item">
+                        <span class="metric-inline-title">Clean Columns:</span>
+                        <span class="metric-inline-value" id="valCleanCols">0</span>
+                    </div>
+                    <div style="color:var(--border);">|</div>
+                    <div class="metric-inline-item">
+                        <span class="metric-inline-title">Duplicates Removed:</span>
+                        <span class="metric-inline-value" id="valDupsRemoved" style="color:var(--danger)">0</span>
+                    </div>
+                </div>
+
+                <!-- Processing Summary -->
+                <div class="card" id="summaryCard" style="margin-bottom:0.6rem; padding:0.6rem 0.8rem;">
+                    <div style="font-weight:700; font-size:0.8rem; margin-bottom:0.15rem;"><i class="fa-solid fa-circle-check" style="color:var(--success)"></i> Processing Status:</div>
+                    <div id="summaryReport" style="font-size:0.75rem; line-height:1.35; color:var(--text-muted);">Ready</div>
+                </div>
+
+                <!-- Table View Container with Tabs -->
+                <div class="card" style="padding:0.6rem;">
+                    <!-- TAB BAR WITH DUPLICATE VIEW AND HIDE OPTION -->
+                    <div class="tab-bar">
+                        <button class="tab-btn active" id="btnTabClean" onclick="switchTab('clean')">
+                            <i class="fa-solid fa-sparkles"></i> Cleaned View <span class="tag-success" id="cleanBadge">0</span>
+                        </button>
+                        <button class="tab-btn" id="btnTabRaw" onclick="switchTab('raw')">
+                            <i class="fa-solid fa-file-circle-exclamation"></i> Raw View <span class="tag-warning" id="rawBadge">0</span>
+                        </button>
+                        <button class="tab-btn" id="btnTabDup" onclick="switchTab('dup')">
+                            <i class="fa-solid fa-trash-can"></i> Deleted Duplicates <span class="tag-danger" id="dupBadge">0</span>
+                        </button>
+                        <button class="tab-btn" id="btnTabHide" onclick="switchTab('hide')">
+                            <i class="fa-solid fa-eye-slash"></i> Hide View
+                        </button>
+                    </div>
+
+                    <!-- Clean Data Table View -->
+                    <div id="viewCleanData">
+                        <div class="table-container">
+                            <table>
+                                <thead><tr id="tableHeaderClean"></tr></thead>
+                                <tbody id="tableBodyClean"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Raw Data Table View -->
+                    <div id="viewRawData" style="display:none;">
+                        <div class="table-container">
+                            <table>
+                                <thead><tr id="tableHeaderRaw"></tr></thead>
+                                <tbody id="tableBodyRaw"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Deleted Duplicates View -->
+                    <div id="viewDupData" style="display:none;">
+                        <div class="table-container">
+                            <table>
+                                <thead><tr id="tableHeaderDup"></tr></thead>
+                                <tbody id="tableBodyDup"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Hide View Placeholder -->
+                    <div id="viewHideData" style="display:none; text-align:center; padding: 2rem 1rem; color: var(--text-muted);">
+                        <i class="fa-solid fa-eye-slash" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
+                        <p style="font-weight: 600;">Data preview is hidden. Click any tab above to unhide.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Neutral Footer -->
+    <footer class="neutral-footer">
+        Developed by <span>Sabir Kazi</span> - Data Analytics and AI Enthusiast
+    </footer>
+</div>
+
+<script>
+    let rawFileRows = [];
+    let cleanedDataset = [];
+    let duplicateDataset = [];
+    let currentTab = 'clean';
+
+    function setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+    }
+
+    /* Tab Handler */
+    function switchTab(tab) {
+        currentTab = tab;
+        document.getElementById('btnTabClean').classList.remove('active');
+        document.getElementById('btnTabRaw').classList.remove('active');
+        document.getElementById('btnTabDup').classList.remove('active');
+        document.getElementById('btnTabHide').classList.remove('active');
+
+        document.getElementById('viewCleanData').style.display = 'none';
+        document.getElementById('viewRawData').style.display = 'none';
+        document.getElementById('viewDupData').style.display = 'none';
+        document.getElementById('viewHideData').style.display = 'none';
+
+        if (tab === 'clean') {
+            document.getElementById('viewCleanData').style.display = 'block';
+            document.getElementById('btnTabClean').classList.add('active');
+        } else if (tab === 'raw') {
+            document.getElementById('viewRawData').style.display = 'block';
+            document.getElementById('btnTabRaw').classList.add('active');
+        } else if (tab === 'dup') {
+            document.getElementById('viewDupData').style.display = 'block';
+            document.getElementById('btnTabDup').classList.add('active');
+        } else if (tab === 'hide') {
+            document.getElementById('viewHideData').style.display = 'block';
+            document.getElementById('btnTabHide').classList.add('active');
+        }
+    }
+
+    function triggerCleanPrint() {
+        if (currentTab !== 'clean') {
+            switchTab('clean');
+        }
+        window.print();
+    }
+
+    function handleFileSelect(evt) {
+        const file = evt.target.files[0];
+        if (!file) return;
+
+        document.getElementById('fileNameDisplay').innerHTML = `<i class="fa-solid fa-file-csv"></i> File: ${file.name}`;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            
+            rawFileRows = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
+            
+            renderRawTable(rawFileRows);
+            applyCleaningPipeline();
+            
+            document.getElementById('dashboard').style.display = 'flex';
+            document.getElementById('dropZone').style.display = 'none';
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function renderRawTable(rows) {
+        if (!rows || rows.length === 0) return;
+        document.getElementById('rawBadge').innerText = `${rows.length} Rows`;
+        
+        let maxCols = Math.max(...rows.slice(0, 20).map(r => r.length));
+        let headers = Array.from({length: maxCols}, (_, i) => `Col ${i + 1}`);
+        
+        document.getElementById('tableHeaderRaw').innerHTML = headers.map(h => `<th>${h}</th>`).join('');
+        document.getElementById('tableBodyRaw').innerHTML = rows.slice(0, 50).map(r => {
+            return '<tr>' + headers.map((_, idx) => `<td>${r[idx] !== undefined ? r[idx] : ''}</td>`).join('') + '</tr>';
+        }).join('');
+    }
+
+    function applyCleaningPipeline() {
+        if (!rawFileRows || rawFileRows.length === 0) return;
+
+        const autoSplit = document.getElementById('optAutoSplit').checked;
+        const cleanNoise = document.getElementById('optCleanNoise').checked;
+        const splitName = document.getElementById('optSplitName').checked;
+        const cleanUnits = document.getElementById('optCleanUnits').checked;
+        const fixDates = document.getElementById('optFixDates').checked;
+        const dedupe = document.getElementById('optDedupe').checked;
+
+        let logs = [];
+        let rows = JSON.parse(JSON.stringify(rawFileRows));
+
+        let headerIndex = 0;
+        for (let i = 0; i < Math.min(10, rows.length); i++) {
+            let line = rows[i].join(' ');
+            if (line.includes('|') || line.includes('>') || line.includes('~') || line.includes('Name')) {
+                headerIndex = i;
+                break;
+            }
+        }
+
+        let rawHeaderLine = rows[headerIndex].join('|');
+        if (cleanNoise) rawHeaderLine = rawHeaderLine.replace(/^\s*#+\s*/g, '');
+        
+        let headerCols = [];
+        if (autoSplit) {
+            headerCols = rawHeaderLine.replace(/[>~;\t]/g, '|').split('|').map(c => c.trim()).filter(c => c !== "");
+            logs.push("Multi-delimiter auto-splitter structured columns across '|', '>', '~'.");
+        } else {
+            headerCols = rows[headerIndex].map(c => String(c).trim());
+        }
+
+        let parsedRecords = [];
+        let origCount = 0;
+
+        for (let i = headerIndex + 1; i < rows.length; i++) {
+            let rowLine = rows[i].join('|');
+            if (!rowLine.replace(/\|/g, '').trim()) continue;
+            origCount++;
+
+            if (cleanNoise) {
+                rowLine = rowLine.replace(/^\s*#+\s*/g, '');
+            }
+
+            let parts = [];
+            if (autoSplit) {
+                parts = rowLine.replace(/[>~;\t]/g, '|').split('|').map(p => p.trim());
+            } else {
+                parts = rows[i].map(p => String(p).trim());
+            }
+
+            let record = {};
+            headerCols.forEach((colName, idx) => {
+                record[colName] = parts[idx] !== undefined ? parts[idx] : "";
+            });
+
+            parsedRecords.push(record);
+        }
+
+        parsedRecords.forEach(rec => {
+            if (splitName && rec['Name']) {
+                let nameStr = rec['Name'].replace(/^\s*#+\s*/g, '').trim();
+                let parts = nameStr.split(' ');
+                rec['First Name'] = parts[0] || '';
+                rec['Last Name'] = parts.slice(1).join(' ') || '';
+            }
+
+            if (cleanUnits) {
+                Object.keys(rec).forEach(key => {
+                    if (typeof rec[key] === 'string' && /\d+\.?\d*\s*(hrs|hr|kg|lbs|\$)/i.test(rec[key])) {
+                        rec[key] = rec[key].replace(/(hrs|hr|kg|lbs|\$)/gi, '').trim();
+                    }
+                });
+            }
+
+            if (fixDates) {
+                Object.keys(rec).forEach(key => {
+                    if (/date|dob/i.test(key) && rec[key]) {
+                        let parsedDate = parseAnyDate(rec[key]);
+                        if (parsedDate) rec[key] = parsedDate;
+                    }
+                });
+            }
+        });
+
+        duplicateDataset = [];
+        if (dedupe) {
+            let setMap = new Set();
+            let uniqueRecords = [];
+            
+            parsedRecords.forEach(r => {
+                let str = JSON.stringify(r);
+                if (setMap.has(str)) {
+                    duplicateDataset.push(r);
+                } else {
+                    setMap.add(str);
+                    uniqueRecords.push(r);
+                }
+            });
+            parsedRecords = uniqueRecords;
+            if (duplicateDataset.length > 0) logs.push(`Removed ${duplicateDataset.length} duplicate records.`);
+        }
+
+        cleanedDataset = parsedRecords;
+
+        document.getElementById('valOrigRows').innerText = origCount;
+        document.getElementById('valCleanCols').innerText = Object.keys(cleanedDataset[0] || {}).length;
+        document.getElementById('valDupsRemoved').innerText = duplicateDataset.length;
+        document.getElementById('cleanBadge').innerText = `${cleanedDataset.length} Rows`;
+        document.getElementById('dupBadge').innerText = `${duplicateDataset.length} Rows`;
+
+        let summaryText = `Structured <b>${cleanedDataset.length}</b> rows into <b>${Object.keys(cleanedDataset[0] || {}).length} clean columns</b>. ${logs.join(' ')}`;
+        document.getElementById('summaryReport').innerHTML = summaryText;
+
+        renderCleanTable(cleanedDataset);
+        renderDuplicateTable(duplicateDataset);
+    }
+
+    function parseAnyDate(val) {
+        if (!val) return "";
+        val = String(val).trim();
+        let d = new Date(val);
+        if (!isNaN(d.getTime())) {
+            return d.toISOString().split('T')[0];
+        }
+        let parts = val.split(/[\/\-\.]/);
+        if (parts.length === 3) {
+            let p1 = parseInt(parts[0]), p2 = parseInt(parts[1]), p3 = parseInt(parts[2]);
+            if (p3 < 100) p3 += 2000;
+            if (p1 > 1000) {
+                return `${p1}-${String(p2).padStart(2,'0')}-${String(p3).padStart(2,'0')}`;
+            } else if (p1 <= 31 && p2 <= 12) {
+                return `${p3}-${String(p2).padStart(2,'0')}-${String(p1).padStart(2,'0')}`;
+            }
+        }
+        return val;
+    }
+
+    function renderCleanTable(data) {
+        if (!data || data.length === 0) return;
+        const headers = Object.keys(data[0]);
+        document.getElementById('tableHeaderClean').innerHTML = headers.map(h => `<th>${h}</th>`).join('');
+        
+        document.getElementById('tableBodyClean').innerHTML = data.slice(0, 50).map(r => {
+            return '<tr>' + headers.map(h => `<td>${r[h] !== undefined ? r[h] : ''}</td>`).join('') + '</tr>';
+        }).join('');
+    }
+
+    function renderDuplicateTable(data) {
+        const headerElem = document.getElementById('tableHeaderDup');
+        const bodyElem = document.getElementById('tableBodyDup');
+
+        if (!data || data.length === 0) {
+            headerElem.innerHTML = '<th>Status</th>';
+            bodyElem.innerHTML = '<tr><td style="text-align:center; padding:1.5rem; color:var(--text-muted);">No duplicate rows found or deduplication option is turned off.</td></tr>';
+            return;
+        }
+
+        const headers = Object.keys(data[0]);
+        headerElem.innerHTML = headers.map(h => `<th>${h}</th>`).join('');
+        
+        bodyElem.innerHTML = data.map(r => {
+            return '<tr>' + headers.map(h => `<td>${r[h] !== undefined ? r[h] : ''}</td>`).join('') + '</tr>';
+        }).join('');
+    }
+
+    function exportExcel() {
+        if (!cleanedDataset || cleanedDataset.length === 0) return;
+        const ws = XLSX.utils.json_to_sheet(cleanedDataset);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Cleaned Data");
+
+        if (duplicateDataset && duplicateDataset.length > 0) {
+            const wsDup = XLSX.utils.json_to_sheet(duplicateDataset);
+            XLSX.utils.book_append_sheet(wb, wsDup, "Deleted Duplicates");
+        }
+
+        XLSX.writeFile(wb, "Cleaned_Employee_Database.xlsx");
+    }
+</script>
+
+</body>
+</html>
