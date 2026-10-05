@@ -1,68 +1,122 @@
-function applyCleaningPipeline() {
-    if (!rawFileRows || rawFileRows.length === 0) return;
-
-    const detectServiceType = document.getElementById('optDetectServiceType').checked;
-    const extractDocStatus = document.getElementById('optExtractDocStatus').checked;
-    const explodeMultiline = document.getElementById('optExplodeMultiline').checked;
-    const cleanNoise = document.getElementById('optCleanNoise').checked;
-    const fixDates = document.getElementById('optFixDates').checked;
-    const dedupe = document.getElementById('optDedupe').checked;
-
-    // Behtar header row detection jo aap ki file ke mutabiq row dhoond le gi
-    let headerRowIndex = rawFileRows.findIndex(row => row.some(cell => {
-        let val = String(cell).toLowerCase().trim();
-        return val === 'id' || val === 'name' || val === 'designation' || val === 'document';
-    }));
-    if (headerRowIndex === -1) headerRowIndex = 0;
-
-    let rawHeaders = rawFileRows[headerRowIndex].map(h => String(h).trim());
-    let dataRows = rawFileRows.slice(headerRowIndex + 1);
-
-    let parsedRecords = [];
-    let origCount = dataRows.length;
-
-    dataRows.forEach(row => {
-        let record = {};
-        rawHeaders.forEach((h, idx) => {
-            if (h !== "" && h !== "undefined") {
-                let val = row[idx] !== undefined ? row[idx] : "";
-                if (typeof val === 'string' && cleanNoise && val.startsWith("#######")) val = "";
-                record[h] = val;
-            }
-        });
-
-        if (Object.keys(record).length === 0) return;
-
-        // Document column ko dynamically dhoondna chahe naam kuch bhi ho
-        let rawDocText = "";
-        Object.keys(record).forEach(k => {
-            if (/document|doc/i.test(k)) {
-                if (record[k]) rawDocText = record[k];
-            }
-        });
-
-        let docEntries = parseDocumentEntries(rawDocText);
-
-        if (explodeMultiline && docEntries.length > 1) {
-            docEntries.forEach(entry => {
-                let newRec = { ...record };
-                if (extractDocStatus) {
-                    newRec['Document'] = entry.document;
-                    newRec['Document Status'] = entry.status;
-                }
-                if (detectServiceType) {
-                    newRec['Service'] = detectServiceCategory(entry.document);
-                }
-                parsedRecords.push(newRec);
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro AI Excel Data Cleaning & Analytics Suite</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+    :root[data-theme="light"] {
+        --bg: #f8fafc; --card-bg: #ffffff; --primary: #1e293b; --text: #0f172a; --text-muted: #64748b; --border: #e2e8f0; --accent: #2563eb; --accent-hover: #1d4ed8; --accent-light: #eff6ff; --success: #10b981; --danger: #ef4444; --shadow: 0 4px 12px rgba(0,0,0,0.05); --header-gradient: linear-gradient(135deg, #1e3a8a, #2563eb);
+    }
+    :root[data-theme="dark"] {
+        --bg: #0f172a; --card-bg: #1e293b; --primary: #f8fafc; --text: #f1f5f9; --text-muted: #94a3b8; --border: #334155; --accent: #3b82f6; --accent-hover: #60a5fa; --accent-light: #1e293b; --success: #34d399; --danger: #f87171; --shadow: 0 4px 12px rgba(0,0,0,0.3); --header-gradient: linear-gradient(135deg, #0f172a, #1e293b);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 3rem; font-size: 0.88rem; }
+    .container { max-width: 1350px; margin: 0 auto; padding: 1rem; }
+    .top-header { background: var(--header-gradient); color: white; padding: 1rem 1.5rem; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+    .upload-card { background: var(--card-bg); border: 2px dashed var(--accent); border-radius: 12px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; }
+    .btn { background: var(--accent); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; }
+    .dashboard { display: none; flex-direction: column; gap: 1rem; }
+    .grid-compact { display: grid; grid-template-columns: 290px 1fr; gap: 1rem; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
+    .table-container { overflow-x: auto; max-height: 380px; border: 1px solid var(--border); border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.78rem; text-align: left; }
+    th, td { padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th { background: var(--bg); color: var(--primary); font-weight: 700; position: sticky; top: 0; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="top-header">
+        <div>
+            <h1><i class="fa-solid fa-wand-magic-sparkles"></i> AI Excel Data Cleaner & Studio</h1>
+            <p>Smart Document Classification & Status Parsing</p>
+        </div>
+    </div>
+    <div class="upload-card" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <i class="fa-solid fa-file-excel" style="font-size: 2.5rem; color: var(--accent); margin-bottom: 0.75rem;"></i>
+        <h3>Click or Drag & Drop Excel / CSV File Here</h3>
+        <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" style="display:none;" onchange="handleFileSelect(event)">
+    </div>
+    <div class="dashboard" id="dashboard">
+        <div style="background:var(--card-bg); padding:0.6rem 1rem; border-radius:10px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <div id="fileNameDisplay" style="font-weight:700;">File Loaded</div>
+            <button class="btn" style="background:#d97706;" onclick="resetToUploadNewFile()">Attach New File</button>
+        </div>
+        <div class="grid-compact">
+            <div class="card">
+                <h3>Studio Control</h3>
+                <button class="btn" style="width:100%; margin-top:1rem;" onclick="applyCleaningPipeline()">Re-Apply Cleaning</button>
+            </div>
+            <div class="card">
+                <div class="table-container">
+                    <table>
+                        <thead><tr id="tableHeaderClean"></tr></thead>
+                        <tbody id="tableBodyClean"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    let rawFileRows = [], cleanedDataset = [];
+    function resetToUploadNewFile() {
+        rawFileRows = []; cleanedDataset = [];
+        document.getElementById('fileInput').value = "";
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('dropZone').style.display = 'block';
+    }
+    function handleFileSelect(evt) {
+        const file = evt.target.files[0];
+        if (!file) return;
+        document.getElementById('fileNameDisplayinnerText = `File: ${file.name}`;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array', cellDates: false, raw: true});
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            rawFileRows = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: "", raw: false});
+            applyCleaningPipeline();
+            document.getElementById('dashboard').style.display = 'flex';
+            document.getElementById('dropZone').style.display = 'none';
+        };
+        reader.readAsArrayBuffer(file);
+    }
+    function parseDocumentEntries(rawText) {
+        if (!rawText) return [{ document: "", status: "N/A" }];
+        return [{ document: String(rawText), status: "N/A" }];
+    }
+    function detectServiceCategory(docName) { return "Educational Degree Verification"; }
+    function applyCleaningPipeline() {
+        if (!rawFileRows || rawFileRows.length === 0) return;
+        let headerRowIndex = rawFileRows.findIndex(row => row.some(cell => {
+            let val = String(cell).toLowerCase().trim();
+            return val === 'id' || val === 'name' || val === 'designation' || val === 'document';
+        }));
+        if (headerRowIndex === -1) headerRowIndex = 0;
+        let rawHeaders = rawFileRows[headerRowIndex].map(h => String(h).trim());
+        let dataRows = rawFileRows.slice(headerRowIndex + 1);
+        cleanedDataset = dataRows.map(row => {
+            let record = {};
+            rawHeaders.forEach((h, idx) => {
+                if (h !== "" && h !== "undefined") record[h] = row[idx] !== undefined ? row[idx] : "";
             });
-        } else {
-            if (extractDocStatus) {
-                record['Document'] = docEntries[0].document;
-                record['Document Status'] = docEntries[0].status;
-            }
-            if (detectServiceType) {
-                record['Service'] = detectServiceCategory(docEntries[0].document);
-            }
-            parsedRecords.push(record);
-        }
-    });
+            return record;
+        });
+        renderCleanTable(cleanedDataset);
+    }
+    function renderCleanTable(data) {
+        if (!data || data.length === 0) return;
+        const headers = Object.keys(data[0]);
+        document.getElementById('tableHeaderClean').innerHTML = headers.map(h => `<th>${h}</th>`).join('');
+        document.getElementById('tableBodyClean').innerHTML = data.slice(0, 50).map(r => {
+            return '<tr>' + headers.map(h => `<td>${r[h] !== undefined ? r[h] : ''}</td>`).join('') + '</tr>';
+        }).join('');
+    }
+</script>
+</body>
+</html>
